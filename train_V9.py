@@ -79,7 +79,7 @@ def style_func(img_list, lab_list):
 def run_model(model, images, training=True):
     return model(images, training=training)
 
-#@tf.function
+@tf.function
 def cal_loss(images, style_images, noise, 
              g_model_A2B, g_model_B2A, 
              s_model_real, s_model_fake, 
@@ -87,8 +87,8 @@ def cal_loss(images, style_images, noise,
     # 라벨넣는것으로 조금만 추가해보자! --> 원래는 이것까지 하는게 내 목표였다 (오늘 논문 할당양 쓰고 수정하자)
     with tf.GradientTape() as g_tape, tf.GradientTape() as s_tape, tf.GradientTape() as d_tape:
         fake_img = run_model(g_model_A2B, [images, style_images], True)
-        cycle_img = run_model(g_model_A2B, [fake_img, images], False)
-        fake_style_logits = run_model(s_model_real, [noise, fake_img], False)
+        cycle_img = run_model(g_model_B2A, [fake_img, images], True)
+        fake_style_logits = run_model(s_model_real, [noise, fake_img], True)
         real_style_logits = run_model(s_model_real, [noise, style_images], True)
 
         real_dis = run_model(d_model, images, True)
@@ -108,7 +108,7 @@ def cal_loss(images, style_images, noise,
 
     g_optim.apply_gradients(zip(g_grads, g_model_A2B.trainable_variables))
     d_optim.apply_gradients(zip(d_grads, d_model.trainable_variables))
-    s_optim.apply_gradients(zip(s_grads, s_model_real.trainable_variable))
+    s_optim.apply_gradients(zip(s_grads, s_model_real.trainable_variables))
 
     return g_loss, d_loss
 
@@ -138,7 +138,6 @@ def main():
         ckpt_manager = tf.train.CheckpointManager(ckpt, FLAGS.pre_checkpoint_path, 5)
         if ckpt_manager.latest_checkpoint:
             ckpt.restore(ckpt_manager.latest_checkpoint)
-
 
     if FLAGS.train:
         count = 0
@@ -216,7 +215,7 @@ def main():
                 #    ckpt_dir = model_dir + "/" + "Version_7_{}.ckpt".format(count)
                 #    ckpt.save(ckpt_dir)
 
-                #count += 1
+                count += 1
 
 
 if __name__ == "__main__":
